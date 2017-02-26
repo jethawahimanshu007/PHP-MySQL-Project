@@ -1,0 +1,28 @@
+DELIMITER |
+DROP PROCEDURE IF EXISTS addNewNode;
+CREATE PROCEDURE addNewNode(nodeName varchar(100),parentName varchar(100))
+BEGIN
+
+DECLARE parent1 varchar(100);
+DECLARE parent2 varchar(100);
+DECLARE temp varchar(100);
+DECLARE lca varchar(100);
+DECLARE output varchar(1000);
+DECLARE temp1 varchar(1000);
+DECLARE flag integer;
+
+
+SET parent1=nodeName;
+
+INSERT INTO newNodes values(nodeName,parentName);
+
+WHILE  parent1<>'null'
+DO
+
+INSERT INTO NODE_USER values(parent1,nodeName);
+SET parent1=(SELECT parent from newNodes where name=parent1);
+
+END WHILE;
+
+END |
+DELIMITER ;

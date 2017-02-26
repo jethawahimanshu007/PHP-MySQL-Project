@@ -1,0 +1,167 @@
+DELIMITER |
+DROP PROCEDURE IF EXISTS LCA;
+CREATE PROCEDURE LCA(nodeA varchar(100),nodeB varchar(100))
+BEGIN
+
+/*variables for Actual Pointer*/
+DECLARE parent1 varchar(100);
+DECLARE parent2 varchar(100);
+DECLARE lca VARCHAR(100);
+DECLARE flag integer;
+DECLARE NodesUptoNodeA INTEGER;
+DECLARE NodesUptoNodeB INTEGER;
+DECLARE totalNodesAcPo INTEGER;
+/*variables for Actual Pointer*/
+
+
+/*variables for Actual Location*/
+DECLARE totalNodesAcLo INTEGER;
+DECLARE lca1 VARCHAR(100);
+DECLARE partName1 VARCHAR(100);
+DECLARE partName2 VARCHAR(100);
+/*variables for Actual Location*/
+
+
+/*variables for Forwarding Pointer*/
+DECLARE totalNodesFoPo INTEGER;
+/*variables for Forwarding Pointer*/
+
+/*variables for Partition*/
+DECLARE lcaPa VARCHAR(100);
+DECLARE parName1 VARCHAR(100);
+DECLARE parName2 VARCHAR(100);
+DECLARE totalNodesPar VARCHAR(100);
+/*variables for Partition*/
+DECLARE parentForNode VARCHAR(100);
+
+/*Actual Pointer*/
+
+SET parent1=nodeA;
+SET parent2=nodeB;
+SET NodesUptoNodeA=0;
+SET NodesUptoNodeB=0;
+SET flag=0;
+loop1: WHILE  parent1<>'null'
+DO
+	SET parent1=(SELECT parent from newNodes where name=parent1);
+	SET NodesUptoNodeA=NodesUptoNodeA+1;
+	SET parent2=nodeB;
+	SET NodesUptoNodeB=0;
+loop2: WHILE parent2<>'null'
+	DO
+	SET NodesUptoNodeB=NodesUptoNodeB+1;
+	SET parent2=(SELECT parent from newNodes where name=parent2);
+	if parent1=parent2 then
+	SET lca=parent1;
+	SET flag=1;
+	LEAVE loop2;
+	END IF;
+	END WHILE;
+	IF flag=1 THEN
+	LEAVE loop1;
+	END IF;
+	END WHILE;
+
+SET totalNodesAcPo=NodesUptoNodeB+NodesUptoNodeA;
+SELECT totalNodesAcPo;
+UPDATE params_tbl SET AcPoU=AcPoU+totalNodesAcPo;
+
+/*Actual Pointer*/
+
+/*Actual Location*/
+
+SET totalNodesAcLo=totalNodesAcPo;
+SET lca1=lca;
+
+WHILE lca1<>'null'
+DO
+SET lca1=(SELECT parent from newNodes where name=lca1);
+SET totalNodesAcLo=totalNodesAcLo+1;
+END WHILE;
+SET totalNodesAcLo=totalNodesAcLo-1;
+select totalNodesAcLo;
+UPDATE params_tbl SET AcLocU=AcLocU+totalNodesAcLo;
+/*Actual Location*/
+
+/*Forwarding pointer*/
+SET totalNodesFoPo=totalNodesAcPo;
+SELECT totalNodesFoPo;
+UPDATE params_tbl SET ForPoU=ForPoU+totalNodesFoPo;
+/*Forwarding pointer*/
+
+/*Partition*/
+SET parentForNode=(SELECT parent from newNodes WHERE name=nodeA);
+
+SET lcaPa=lca1;
+
+loop1:WHILE parentForNode<>'null'
+DO
+
+SET parName1=(SELECT * from (SELECT partName from partition_tbl where PartName=parentForNode)A limit 1);
+
+IF trim(parName1)=trim(parentForNode)
+THEN
+leave loop1;
+END IF;
+
+SET parentForNode=(SELECT parent from newNodes WHERE name=parentForNode);
+
+END WHILE;
+
+SET parentForNode=(SELECT parent from newNodes WHERE name=nodeB);
+
+loop2:WHILE parentForNode<>'null'
+DO
+
+SET parName2=(SELECT * from (SELECT partName from partition_tbl where PartName=parentForNode)A limit 1);
+
+IF trim(parName2)=trim(parentForNode)
+THEN
+leave loop2;
+END IF;
+
+SET parentForNode=(SELECT parent from newNodes WHERE name=parentForNode);
+
+END WHILE;
+
+IF parName1=parName2
+THEN
+SET totalNodesPar=2;
+ELSE
+SET parent1=parName1;
+SET parent2=parName2;
+SET NodesUptoNodeA=0;
+SET NodesUptoNodeB=0;
+SET flag=0;
+loop1: WHILE  parent1<>'null'
+DO
+	SET parent1=(SELECT parent from newNodes where name=parent1);
+	SET NodesUptoNodeA=NodesUptoNodeA+1;
+	SET parent2=nodeB;
+	SET NodesUptoNodeB=0;
+loop2: WHILE parent2<>'null'
+	DO
+	SET NodesUptoNodeB=NodesUptoNodeB+1;
+	SET parent2=(SELECT parent from newNodes where name=parent2);
+	if parent1=parent2 then
+	SET lca=parent1;
+	SET flag=1;
+	LEAVE loop2;
+	END IF;
+	END WHILE;
+	IF flag=1 THEN
+	LEAVE loop1;
+	END IF;
+	END WHILE;
+	SET totalNodesPar=NodesUptoNodeA+NodesUptoNodeA+3;
+END IF;
+
+SELECT totalNodesPar;
+
+
+UPDATE params_tbl SET ParU=ParU+totalNodesPar;
+
+
+/*Partition*/
+END |
+DELIMITER ;
